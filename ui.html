@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Geist', system-ui, -apple-system, sans-serif;
+    font-size: 12px;
+    color: #000;
+    background: #fff;
+    user-select: none;
+  }
+
+  .tabs { display: flex; padding: 12px 12px 0; }
+
+  .tab {
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: rgba(0,0,0,0.3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .tab:hover { color: rgba(0,0,0,0.5); }
+  .tab.active { color: #000; border-bottom-color: #1F1F1F; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  canvas { width: 100%; height: 250px; display: block; }
+
+  .preview-wrap { background: #1F1F1F; margin: 12px; margin-bottom: 8px; }
+
+  .section { background: #F7F7F7; margin: 0 12px 4px; padding: 12px; }
+
+  .section-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: rgba(0,0,0,0.4);
+    margin-bottom: 20px;
+    text-transform: lowercase;
+  }
+
+  .row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .row:last-child { margin-bottom: 0; }
+
+  .row label {
+    width: 85px;
+    flex-shrink: 0;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #000;
+  }
+
+  .row input[type="range"] {
+    flex: 1; height: 2px;
+    -webkit-appearance: none; appearance: none;
+    background: #D0D0D0; border-radius: 0; outline: none; cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 10px; height: 10px; border-radius: 0;
+    background: #1F1F1F; cursor: pointer; border: none; margin-top: -4px;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track { height: 2px; border-radius: 0; }
+  input[type="range"]:hover::-webkit-slider-thumb { background: #555; transform: scale(1.3); }
+
+  .row .val {
+    min-width: 36px; text-align: right;
+    font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 400; color: #000;
+  }
+
+  .dim-row { display: flex; gap: 8px; overflow: hidden; }
+
+  .dim-input {
+    flex: 1; min-width: 0; background: #fff; border: none;
+    border-bottom: 1px solid #D0D0D0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px; gap: 8px; transition: border-color 0.15s;
+    overflow: hidden;
+  }
+
+  .dim-input:hover { border-bottom-color: #1F1F1F; }
+
+  .dim-input label {
+    font-family: 'Geist Mono', monospace; font-size: 10px; font-weight: 300;
+    text-transform: uppercase; letter-spacing: 0.05em; color: #000; white-space: nowrap;
+  }
+
+  .math-input {
+    flex: 1; min-width: 0; background: transparent; border: none;
+    font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 400;
+    color: #000; text-align: left; outline: none;
+  }
+
+  .math-input:focus { color: #555; }
+
+  .cell-options { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .cell-pill {
+    padding: 5px 10px;
+    font-family: 'Geist Mono', monospace; font-size: 10px; font-weight: 400;
+    letter-spacing: 0.02em; color: #000; background: #fff;
+    border: 1px solid #D0D0D0; cursor: pointer; transition: all 0.12s;
+  }
+
+  .cell-pill:hover { border-color: #1F1F1F; }
+  .cell-pill.active { background: #1F1F1F; color: #fff; border-color: #1F1F1F; }
+
+  .cell-none {
+    font-family: 'Geist Mono', monospace; font-size: 10px; font-weight: 300;
+    color: rgba(0,0,0,0.35); letter-spacing: 0.02em;
+  }
+
+  .check-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .check-row:last-child { margin-bottom: 0; }
+
+  .check-row input[type="checkbox"] {
+    -webkit-appearance: none; appearance: none;
+    width: 12px; height: 12px; border: 1.5px solid #1F1F1F;
+    background: #fff; cursor: pointer; position: relative;
+  }
+
+  .check-row input[type="checkbox"]:checked { background: #1F1F1F; }
+
+  .check-row input[type="checkbox"]:checked::after {
+    content: ''; position: absolute; left: 2px; top: 0px;
+    width: 4px; height: 7px; border: solid #fff;
+    border-width: 0 1.5px 1.5px 0; transform: rotate(45deg);
+  }
+
+  .check-row label {
+    font-family: 'Geist Mono', monospace; font-size: 10px; font-weight: 300;
+    text-transform: uppercase; letter-spacing: 0.05em; color: #000; cursor: pointer;
+  }
+
+  .btn-create {
+    display: block; width: calc(100% - 24px); margin: 4px 12px 0;
+    padding: 0; height: 42px; background: #1F1F1F; color: #fff; border: none;
+    font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 500;
+    letter-spacing: -0.01em; text-transform: lowercase;
+    cursor: pointer; transition: background 0.15s;
+  }
+
+  .btn-create:hover { background: #333; }
+  .btn-create:active { background: #000; }
+
+  .footer { text-align: center; padding: 8px 12px 12px; }
+
+  .footer-line {
+    font-family: 'Geist Mono', monospace; font-size: 8px; font-weight: 400;
+    letter-spacing: 0.02em; text-transform: uppercase; color: #868686;
+    display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+
+  .footer-line span { display: block; }
+
+  .footer-link { color: #868686; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .footer-link:hover { color: #555; }
+</style>
+</head>
+<body>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" id="tabFloor" onclick="switchTab('floor')">floor</div>
+  <div class="tab" id="tabFlat" onclick="switchTab('flat')">flat</div>
+  <div class="tab" id="tabDot" onclick="switchTab('dot')">dot</div>
+  <div class="tab" id="tabLayout" onclick="switchTab('layout')">layout</div>
+</div>
+
+<!-- ======================== -->
+<!-- FLOOR GRID (PERSPECTIVE) -->
+<!-- ======================== -->
+<div class="tab-panel active" id="panelFloor">
+  <div class="preview-wrap"><canvas id="previewFloor" width="780" height="500"></canvas></div>
+
+  <div class="section">
+    <div class="section-label">grid structure</div>
+    <div class="row"><label>Column</label><input type="range" id="cols" min="1" max="24" value="5" /><span class="val" id="colsVal">5</span></div>
+    <div class="row"><label>Rows</label><input type="range" id="rows" min="1" max="24" value="5" /><span class="val" id="rowsVal">5</span></div>
+    <div class="row"><label>Grid Width</label><input type="range" id="gridWidthPct" min="10" max="300" value="100" /><span class="val" id="gridWidthPctVal">100%</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">dimensions</div>
+    <div class="dim-row">
+      <div class="dim-input"><input type="text" id="gridHeight" value="1080" class="math-input" /><label>Height</label></div>
+      <div class="dim-input"><input type="text" id="gridWidth" value="1920" class="math-input" /><label>Width</label></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">perspective</div>
+    <div class="row"><label>Angle</label><input type="range" id="angle" min="5" max="80" value="35" /><span class="val" id="angleVal">35&deg;</span></div>
+    <div class="row"><label>VP Offset X</label><input type="range" id="vpOffsetX" min="-960" max="960" value="0" /><span class="val" id="vpOffsetXVal">0</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">style</div>
+    <div class="row"><label>Stroke</label><input type="range" id="strokeWeight" min="0.5" max="5" step="0.25" value="1" /><span class="val" id="strokeWeightVal">1</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">options</div>
+    <div class="check-row"><input type="checkbox" id="showVP" checked /><label for="showVP">Show Vanishing Point</label></div>
+    <div class="check-row"><input type="checkbox" id="showBorder" checked /><label for="showBorder">Show Border</label></div>
+  </div>
+
+  <button class="btn-create" id="createFloorBtn">create grid</button>
+</div>
+
+<!-- ======================== -->
+<!-- FLAT GRID               -->
+<!-- ======================== -->
+<div class="tab-panel" id="panelFlat">
+  <div class="preview-wrap"><canvas id="previewFlat" width="780" height="500"></canvas></div>
+
+  <div class="section">
+    <div class="section-label">dimensions</div>
+    <div class="dim-row">
+      <div class="dim-input"><input type="text" id="fWidth" value="1920" class="math-input" /><label>Width</label></div>
+      <div class="dim-input"><input type="text" id="fHeight" value="1080" class="math-input" /><label>Height</label></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">cell size</div>
+    <div id="fCellOptions" class="cell-options"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">style</div>
+    <div class="row"><label>Stroke</label><input type="range" id="fStroke" min="0.5" max="5" step="0.25" value="1" /><span class="val" id="fStrokeVal">1</span></div>
+    <div class="row"><label>Opacity</label><input type="range" id="fOpacity" min="5" max="100" value="100" /><span class="val" id="fOpacityVal">100%</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">options</div>
+    <div class="check-row"><input type="checkbox" id="fBorder" checked /><label for="fBorder">Show Border</label></div>
+  </div>
+
+  <button class="btn-create" id="createFlatBtn">create grid</button>
+</div>
+
+<!-- ======================== -->
+<!-- DOTTED GRID             -->
+<!-- ======================== -->
+<div class="tab-panel" id="panelDot">
+  <div class="preview-wrap"><canvas id="previewDot" width="780" height="500"></canvas></div>
+
+  <div class="section">
+    <div class="section-label">dimensions</div>
+    <div class="dim-row">
+      <div class="dim-input"><input type="text" id="dWidth" value="1920" class="math-input" /><label>Width</label></div>
+      <div class="dim-input"><input type="text" id="dHeight" value="1080" class="math-input" /><label>Height</label></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">grid structure</div>
+    <div class="row"><label>Spacing</label><input type="range" id="dSpacing" min="8" max="200" value="40" /><span class="val" id="dSpacingVal">40px</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">style</div>
+    <div class="row"><label>Dot Size</label><input type="range" id="dDotSize" min="1" max="10" step="0.5" value="3" /><span class="val" id="dDotSizeVal">3</span></div>
+    <div class="row"><label>Opacity</label><input type="range" id="dOpacity" min="5" max="100" value="100" /><span class="val" id="dOpacityVal">100%</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">options</div>
+    <div class="check-row"><input type="checkbox" id="dBorder" /><label for="dBorder">Show Border</label></div>
+  </div>
+
+  <button class="btn-create" id="createDotBtn">create grid</button>
+</div>
+
+<!-- ======================== -->
+<!-- LAYOUT GRID            -->
+<!-- ======================== -->
+<div class="tab-panel" id="panelLayout">
+  <div class="preview-wrap"><canvas id="previewLayout" width="780" height="500"></canvas></div>
+
+  <div class="section">
+    <div class="section-label">grid structure</div>
+    <div class="row"><label>Columns</label><input type="range" id="lCols" min="1" max="24" value="4" /><span class="val" id="lColsVal">4</span></div>
+    <div class="row"><label>Rows</label><input type="range" id="lRows" min="1" max="24" value="4" /><span class="val" id="lRowsVal">4</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">dimensions</div>
+    <div class="dim-row">
+      <div class="dim-input"><input type="text" id="lWidth" value="1920" class="math-input" /><label>Width</label></div>
+      <div class="dim-input"><input type="text" id="lHeight" value="1080" class="math-input" /><label>Height</label></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">spacing</div>
+    <div class="row"><label>Gutter</label><input type="range" id="lGutter" min="0" max="60" value="16" /><span class="val" id="lGutterVal">16px</span></div>
+    <div class="row"><label>Margin</label><input type="range" id="lMargin" min="0" max="100" value="24" /><span class="val" id="lMarginVal">24px</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">style</div>
+    <div class="row"><label>Stroke</label><input type="range" id="lStroke" min="0.5" max="5" step="0.25" value="1" /><span class="val" id="lStrokeVal">1</span></div>
+    <div class="row"><label>Opacity</label><input type="range" id="lOpacity" min="5" max="100" value="100" /><span class="val" id="lOpacityVal">100%</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">options</div>
+    <div class="check-row"><input type="checkbox" id="lBorder" checked /><label for="lBorder">Show Border</label></div>
+  </div>
+
+  <button class="btn-create" id="createLayoutBtn">create grid</button>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-line">
+    <span>Vibe Coded by <a href="http://rikkijanae.com/" target="_blank" class="footer-link">Rikki Janae</a></span>
+  </div>
+</div>
+
+<script>
+  // ==========================
+  // TAB SWITCHING
+  // ==========================
+  var currentTab = 'floor';
+  function switchTab(tab) {
+    currentTab = tab;
+    ['Floor','Flat','Dot','Layout'].forEach(function(t) {
+      var key = t.toLowerCase();
+      document.getElementById('tab' + t).className = tab === key ? 'tab active' : 'tab';
+      document.getElementById('panel' + t).className = tab === key ? 'tab-panel active' : 'tab-panel';
+    });
+    if (tab === 'floor') drawFloorPreview();
+    if (tab === 'flat') { renderCellOptions('f'); drawFlatPreview(); }
+    if (tab === 'dot') drawDotPreview();
+    if (tab === 'layout') drawLayoutPreview();
+  }
+
+  // ==========================
+  // MATH EVALUATOR
+  // ==========================
+  function evalMath(str) {
+    str = String(str).trim();
+    if (!/^[\d\s+\-*/().]+$/.test(str)) return NaN;
+    try { return Function('"use strict"; return (' + str + ')')(); }
+    catch(e) { return NaN; }
+  }
+
+  function getMathValue(el) {
+    var result = evalMath(el.value);
+    if (isNaN(result) || result <= 0) return null;
+    return Math.round(result);
+  }
+
+  function setupMathInput(el, onChange) {
+    el.addEventListener('blur', function() {
+      var val = getMathValue(el);
+      if (val !== null) el.value = val;
+      if (onChange) onChange();
+    });
+    el.addEventListener('keydown', function(e) { if (e.key === 'Enter') el.blur(); });
+  }
+
+  // ==========================
+  // SLIDER FILL
+  // ==========================
+  function updateSliderFill(el) {
+    if (el.type !== 'range') return;
+    var min = parseFloat(el.min), max = parseFloat(el.max), val = parseFloat(el.value);
+    var pct = ((val - min) / (max - min)) * 100;
+    el.style.background = 'linear-gradient(to right, #1F1F1F 0%, #1F1F1F ' + pct + '%, #D0D0D0 ' + pct + '%, #D0D0D0 100%)';
+  }
+
+  // ==========================
+  // SHARED CELL SIZE LOGIC
+  // ==========================
+  function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = b; b = a % t; a = t; } return a; }
+
+  function findPerfectCellSizes(w, h) {
+    var g = gcd(w, h), divs = [];
+    for (var i = 1; i * i <= g; i++) {
+      if (g % i === 0) {
+        if (i >= 4 && i <= 500) divs.push(i);
+        var other = g / i;
+        if (other !== i && other >= 4 && other <= 500) divs.push(other);
+      }
+    }
+    divs.sort(function(a, b) { return a - b; });
+    return divs;
+  }
+
+  var selectedCells = { f: null, d: null };
+
+  function renderCellOptions(prefix) {
+    var wEl = document.getElementById(prefix === 'f' ? 'fWidth' : 'dWidth');
+    var hEl = document.getElementById(prefix === 'f' ? 'fHeight' : 'dHeight');
+    var container = document.getElementById(prefix + 'CellOptions');
+    var w = getMathValue(wEl), h = getMathValue(hEl);
+    if (!w || !h) {
+      container.innerHTML = '<span class="cell-none">enter valid dimensions</span>';
+      selectedCells[prefix] = null; return;
+    }
+    var sizes = findPerfectCellSizes(w, h);
+    if (sizes.length === 0) {
+      container.innerHTML = '<span class="cell-none">no perfect square fits</span>';
+      selectedCells[prefix] = null; return;
+    }
+    if (selectedCells[prefix] === null || sizes.indexOf(selectedCells[prefix]) === -1) {
+      var best = sizes[0];
+      for (var i = 0; i < sizes.length; i++) {
+        if (Math.abs(sizes[i] - 60) < Math.abs(best - 60)) best = sizes[i];
+      }
+      selectedCells[prefix] = best;
+    }
+    var html = '';
+    for (var j = 0; j < sizes.length; j++) {
+      var s = sizes[j], cols = w / s, rows = h / s;
+      var cls = s === selectedCells[prefix] ? 'cell-pill active' : 'cell-pill';
+      html += '<div class="' + cls + '" onclick="selectCell(\'' + prefix + '\',' + s + ')">' + s + 'px <span style="opacity:0.4;font-size:9px">(' + cols + '\u00D7' + rows + ')</span></div>';
+    }
+    container.innerHTML = html;
+  }
+
+  window.selectCell = function(prefix, size) {
+    selectedCells[prefix] = size;
+    renderCellOptions(prefix);
+    if (prefix === 'f') drawFlatPreview();
+    if (prefix === 'd') drawDotPreview();
+  };
+
+  // ==========================
+  // FLOOR GRID (PERSPECTIVE)
+  // ==========================
+  var canvasF = document.getElementById('previewFloor');
+  var ctxF = canvasF.getContext('2d');
+
+  var colsEl = document.getElementById('cols'), rowsEl = document.getElementById('rows');
+  var gridWidthPctEl = document.getElementById('gridWidthPct');
+  var gridWidthEl = document.getElementById('gridWidth'), gridHeightEl = document.getElementById('gridHeight');
+  var angleEl = document.getElementById('angle'), vpOffsetXEl = document.getElementById('vpOffsetX');
+  var strokeWeightEl = document.getElementById('strokeWeight');
+  var showVPEl = document.getElementById('showVP'), showBorderEl = document.getElementById('showBorder');
+
+  var floorInputs = [colsEl, rowsEl, gridWidthPctEl, gridWidthEl, gridHeightEl, angleEl, vpOffsetXEl, strokeWeightEl, showVPEl, showBorderEl];
+
+  function getFloorParams() {
+    return {
+      cols: parseInt(colsEl.value), rows: parseInt(rowsEl.value),
+      gridWidthPct: parseInt(gridWidthPctEl.value),
+      gridWidth: parseInt(gridWidthEl.value) || 1920, gridHeight: parseInt(gridHeightEl.value) || 1080,
+      angle: parseInt(angleEl.value), vpOffsetX: parseInt(vpOffsetXEl.value),
+      strokeWeight: parseFloat(strokeWeightEl.value),
+      showVP: showVPEl.checked, showBorder: showBorderEl.checked
+    };
+  }
+
+  function updateFloorLabels() {
+    document.getElementById('colsVal').textContent = colsEl.value;
+    document.getElementById('rowsVal').textContent = rowsEl.value;
+    document.getElementById('gridWidthPctVal').textContent = gridWidthPctEl.value + '%';
+    document.getElementById('angleVal').textContent = angleEl.value + '\u00B0';
+    document.getElementById('vpOffsetXVal').textContent = vpOffsetXEl.value;
+    document.getElementById('strokeWeightVal').textContent = strokeWeightEl.value;
+  }
+
+  function drawFloorPreview() {
+    var p = getFloorParams(), cw = canvasF.width, ch = canvasF.height;
+    ctxF.clearRect(0, 0, cw, ch);
+    var baseWidth = p.gridWidth * p.gridWidthPct / 100;
+    var gridLeft = (p.gridWidth - baseWidth) / 2, gridRight = gridLeft + baseWidth;
+    var pad = 30, angleRad = p.angle * Math.PI / 180;
+    var absVpY = (baseWidth / 2) / Math.tan(angleRad), vpYW = -absVpY;
+    var vpXW = gridLeft + baseWidth / 2 + p.vpOffsetX;
+    var wT = 0, wB = p.gridHeight;
+    if (p.showVP && vpYW < 0) wT = vpYW - 15;
+    var scale = Math.min((cw - pad*2) / p.gridWidth, (ch - pad*2) / (wB - wT));
+    var ox = (cw - p.gridWidth * scale) / 2, oy = (ch - (wB - wT) * scale) / 2 - wT * scale;
+    function tx(x) { return ox + x * scale; }
+    function ty(y) { return oy + y * scale; }
+    var rt = (0 - vpYW) / (p.gridHeight - vpYW);
+    ctxF.strokeStyle = 'rgba(255,255,255,0.35)'; ctxF.lineWidth = 1;
+    var cs = baseWidth / p.cols, tcs = cs * rt;
+    var eLB = Math.ceil(Math.max(0, gridLeft) / cs), eRB = Math.ceil(Math.max(0, p.gridWidth - gridRight) / cs);
+    var tX0 = vpXW + (gridLeft - vpXW) * rt, tXN = vpXW + (gridRight - vpXW) * rt;
+    var eLT = tcs > 0 ? Math.ceil(Math.max(0, tX0) / tcs) : 0;
+    var eRT = tcs > 0 ? Math.ceil(Math.max(0, p.gridWidth - tXN) / tcs) : 0;
+    var eL = Math.max(eLB, eLT), eR = Math.max(eRB, eRT);
+    for (var i = -eL; i <= p.cols + eR; i++) {
+      var bx = gridLeft + (i / p.cols) * baseWidth, topX = vpXW + (bx - vpXW) * rt;
+      ctxF.beginPath(); ctxF.moveTo(tx(topX), ty(0)); ctxF.lineTo(tx(bx), ty(p.gridHeight)); ctxF.stroke();
+    }
+    for (var j = 0; j <= p.rows; j++) {
+      var y; if (j === 0) y = p.gridHeight; else if (j === p.rows) y = 0;
+      else y = vpYW + (p.gridHeight - vpYW) * (absVpY * p.rows) / (absVpY * p.rows + j * p.gridHeight);
+      var t = (y - vpYW) / (p.gridHeight - vpYW);
+      var xL = Math.min(vpXW + (gridLeft - vpXW) * t, 0), xR = Math.max(vpXW + (gridRight - vpXW) * t, p.gridWidth);
+      ctxF.beginPath(); ctxF.moveTo(tx(xL), ty(y)); ctxF.lineTo(tx(xR), ty(y)); ctxF.stroke();
+    }
+    if (p.showBorder) {
+      var gTL = vpXW + (gridLeft - vpXW) * rt, gTR = vpXW + (gridRight - vpXW) * rt;
+      ctxF.strokeStyle = 'rgba(255,255,255,0.6)'; ctxF.lineWidth = 1.5;
+      ctxF.beginPath(); ctxF.moveTo(tx(gridLeft), ty(p.gridHeight)); ctxF.lineTo(tx(gridRight), ty(p.gridHeight));
+      ctxF.lineTo(tx(gTR), ty(0)); ctxF.lineTo(tx(gTL), ty(0)); ctxF.closePath(); ctxF.stroke();
+    }
+    if (p.showVP) {
+      var sx = tx(vpXW), sy = ty(vpYW);
+      ctxF.strokeStyle = 'rgba(200,80,80,0.3)'; ctxF.lineWidth = 0.5; ctxF.setLineDash([3,3]);
+      ctxF.beginPath(); ctxF.moveTo(sx, sy); ctxF.lineTo(tx(gridLeft), ty(p.gridHeight)); ctxF.stroke();
+      ctxF.beginPath(); ctxF.moveTo(sx, sy); ctxF.lineTo(tx(gridRight), ty(p.gridHeight)); ctxF.stroke();
+      ctxF.setLineDash([]);
+      ctxF.strokeStyle = 'rgba(200,80,80,0.8)'; ctxF.lineWidth = 1.5;
+      ctxF.beginPath(); ctxF.moveTo(sx-6, sy); ctxF.lineTo(sx+6, sy); ctxF.stroke();
+      ctxF.beginPath(); ctxF.moveTo(sx, sy-6); ctxF.lineTo(sx, sy+6); ctxF.stroke();
+      ctxF.fillStyle = 'rgba(200,80,80,0.7)'; ctxF.font = '8px Geist Mono, monospace';
+      ctxF.textAlign = 'center'; ctxF.fillText('VP', sx, sy - 10);
+    }
+  }
+
+  floorInputs.forEach(function(el) {
+    el.addEventListener('input', function() { updateFloorLabels(); updateSliderFill(el); drawFloorPreview(); });
+  });
+  gridWidthEl.addEventListener('input', function() {
+    var w = parseInt(gridWidthEl.value) || 1920;
+    vpOffsetXEl.min = -Math.round(w / 2); vpOffsetXEl.max = Math.round(w / 2);
+  });
+  setupMathInput(gridWidthEl, function() { updateFloorLabels(); drawFloorPreview(); });
+  setupMathInput(gridHeightEl, function() { updateFloorLabels(); drawFloorPreview(); });
+
+  document.getElementById('createFloorBtn').addEventListener('click', function() {
+    var p = getFloorParams();
+    parent.postMessage({ pluginMessage: { type: 'create-grid', cols: p.cols, rows: p.rows, gridWidthPct: p.gridWidthPct, gridWidth: p.gridWidth, gridHeight: p.gridHeight, angle: p.angle, vpOffsetX: p.vpOffsetX, strokeWeight: p.strokeWeight, showVP: p.showVP, showBorder: p.showBorder } }, '*');
+  });
+
+  // ==========================
+  // FLAT GRID
+  // ==========================
+  var canvasFL = document.getElementById('previewFlat'), ctxFL = canvasFL.getContext('2d');
+  var fWidthEl = document.getElementById('fWidth'), fHeightEl = document.getElementById('fHeight');
+  var fStrokeEl = document.getElementById('fStroke'), fOpacityEl = document.getElementById('fOpacity');
+  var fBorderEl = document.getElementById('fBorder');
+  var flatSliders = [fStrokeEl, fOpacityEl, fBorderEl];
+
+  function getFlatParams() {
+    var w = getMathValue(fWidthEl) || 1920, h = getMathValue(fHeightEl) || 1080;
+    var cs = selectedCells['f'] || 60;
+    return { cols: Math.floor(w / cs), rows: Math.floor(h / cs), cellSize: cs, frameWidth: w, frameHeight: h,
+      strokeWeight: parseFloat(fStrokeEl.value), strokeOpacity: parseInt(fOpacityEl.value), showBorder: fBorderEl.checked };
+  }
+
+  function updateFlatLabels() {
+    document.getElementById('fStrokeVal').textContent = fStrokeEl.value;
+    document.getElementById('fOpacityVal').textContent = fOpacityEl.value + '%';
+  }
+
+  function drawFlatPreview() {
+    var p = getFlatParams(), cw = canvasFL.width, ch = canvasFL.height;
+    ctxFL.clearRect(0, 0, cw, ch);
+    var pad = 30, scale = Math.min((cw-pad*2)/p.frameWidth, (ch-pad*2)/p.frameHeight);
+    var fox = (cw - p.frameWidth*scale)/2, foy = (ch - p.frameHeight*scale)/2;
+    ctxFL.strokeStyle = 'rgba(255,255,255,0.12)'; ctxFL.lineWidth = 1;
+    ctxFL.strokeRect(fox, foy, p.frameWidth*scale, p.frameHeight*scale);
+    var cpx = p.cellSize * scale, alpha = p.strokeOpacity / 100;
+    ctxFL.strokeStyle = 'rgba(255,255,255,' + (alpha*0.5) + ')'; ctxFL.lineWidth = 1;
+    for (var r = 0; r < p.rows; r++) for (var c = 0; c < p.cols; c++) ctxFL.strokeRect(fox+c*cpx, foy+r*cpx, cpx, cpx);
+    if (p.showBorder) {
+      ctxFL.strokeStyle = 'rgba(255,255,255,' + (alpha*0.7) + ')'; ctxFL.lineWidth = 2;
+      ctxFL.strokeRect(fox, foy, p.cols*cpx, p.rows*cpx);
+    }
+  }
+
+  setupMathInput(fWidthEl, function() { renderCellOptions('f'); drawFlatPreview(); });
+  setupMathInput(fHeightEl, function() { renderCellOptions('f'); drawFlatPreview(); });
+  flatSliders.forEach(function(el) { el.addEventListener('input', function() { updateFlatLabels(); updateSliderFill(el); drawFlatPreview(); }); });
+
+  document.getElementById('createFlatBtn').addEventListener('click', function() {
+    var p = getFlatParams();
+    parent.postMessage({ pluginMessage: { type: 'create-flat-grid', cols: p.cols, rows: p.rows, frameWidth: p.frameWidth, frameHeight: p.frameHeight, cellSize: p.cellSize, strokeWeight: p.strokeWeight, strokeOpacity: p.strokeOpacity, showBorder: p.showBorder } }, '*');
+  });
+
+  // ==========================
+  // DOTTED GRID
+  // ==========================
+  var canvasD = document.getElementById('previewDot'), ctxD = canvasD.getContext('2d');
+  var dWidthEl = document.getElementById('dWidth'), dHeightEl = document.getElementById('dHeight');
+  var dSpacingEl = document.getElementById('dSpacing');
+  var dDotSizeEl = document.getElementById('dDotSize'), dOpacityEl = document.getElementById('dOpacity');
+  var dBorderEl = document.getElementById('dBorder');
+  var dotSliders = [dSpacingEl, dDotSizeEl, dOpacityEl, dBorderEl];
+
+  function getDotParams() {
+    var w = getMathValue(dWidthEl) || 1920, h = getMathValue(dHeightEl) || 1080;
+    var spacing = parseInt(dSpacingEl.value);
+    var cols = Math.floor(w / spacing);
+    var rows = Math.floor(h / spacing);
+    return { cols: cols, rows: rows, cellSize: spacing, frameWidth: w, frameHeight: h,
+      dotSize: parseFloat(dDotSizeEl.value), strokeOpacity: parseInt(dOpacityEl.value), showBorder: dBorderEl.checked };
+  }
+
+  function updateDotLabels() {
+    document.getElementById('dSpacingVal').textContent = dSpacingEl.value + 'px';
+    document.getElementById('dDotSizeVal').textContent = dDotSizeEl.value;
+    document.getElementById('dOpacityVal').textContent = dOpacityEl.value + '%';
+  }
+
+  function drawDotPreview() {
+    var p = getDotParams(), cw = canvasD.width, ch = canvasD.height;
+    ctxD.clearRect(0, 0, cw, ch);
+    var pad = 30, scale = Math.min((cw-pad*2)/p.frameWidth, (ch-pad*2)/p.frameHeight);
+    var fox = (cw - p.frameWidth*scale)/2, foy = (ch - p.frameHeight*scale)/2;
+    ctxD.strokeStyle = 'rgba(255,255,255,0.12)'; ctxD.lineWidth = 1;
+    ctxD.strokeRect(fox, foy, p.frameWidth*scale, p.frameHeight*scale);
+    var cpx = p.cellSize * scale, alpha = p.strokeOpacity / 100;
+    var dotR = Math.max(p.dotSize * scale * 0.5, 1);
+    ctxD.fillStyle = 'rgba(255,255,255,' + (alpha*0.6) + ')';
+    for (var r = 0; r <= p.rows; r++) {
+      for (var c = 0; c <= p.cols; c++) {
+        ctxD.beginPath(); ctxD.arc(fox + c*cpx, foy + r*cpx, dotR, 0, Math.PI*2); ctxD.fill();
+      }
+    }
+    if (p.showBorder) {
+      ctxD.strokeStyle = 'rgba(255,255,255,' + (alpha*0.5) + ')'; ctxD.lineWidth = 1;
+      ctxD.strokeRect(fox, foy, p.cols*cpx, p.rows*cpx);
+    }
+  }
+
+  setupMathInput(dWidthEl, function() { drawDotPreview(); });
+  setupMathInput(dHeightEl, function() { drawDotPreview(); });
+  dotSliders.forEach(function(el) { el.addEventListener('input', function() { updateDotLabels(); updateSliderFill(el); drawDotPreview(); }); });
+
+  document.getElementById('createDotBtn').addEventListener('click', function() {
+    var p = getDotParams();
+    parent.postMessage({ pluginMessage: { type: 'create-dotted-grid', cols: p.cols, rows: p.rows, frameWidth: p.frameWidth, frameHeight: p.frameHeight, cellSize: p.cellSize, dotSize: p.dotSize, strokeOpacity: p.strokeOpacity, showBorder: p.showBorder, strokeWeight: 1 } }, '*');
+  });
+
+  // ==========================
+  // LAYOUT GRID
+  // ==========================
+  var canvasL = document.getElementById('previewLayout'), ctxL = canvasL.getContext('2d');
+  var lColsEl = document.getElementById('lCols'), lRowsEl = document.getElementById('lRows');
+  var lWidthEl = document.getElementById('lWidth'), lHeightEl = document.getElementById('lHeight');
+  var lGutterEl = document.getElementById('lGutter'), lMarginEl = document.getElementById('lMargin');
+  var lStrokeEl = document.getElementById('lStroke'), lOpacityEl = document.getElementById('lOpacity');
+  var lBorderEl = document.getElementById('lBorder');
+  var layoutSliders = [lColsEl, lRowsEl, lGutterEl, lMarginEl, lStrokeEl, lOpacityEl, lBorderEl];
+
+  function getLayoutParams() {
+    var w = getMathValue(lWidthEl) || 1920, h = getMathValue(lHeightEl) || 1080;
+    var cols = parseInt(lColsEl.value), rows = parseInt(lRowsEl.value);
+    var gutter = parseInt(lGutterEl.value), margin = parseInt(lMarginEl.value);
+    var innerW = w - margin * 2 - gutter * (cols - 1);
+    var innerH = h - margin * 2 - gutter * (rows - 1);
+    var cellW = innerW / cols, cellH = innerH / rows;
+    return { cols: cols, rows: rows, frameWidth: w, frameHeight: h,
+      gutter: gutter, margin: margin, cellW: cellW, cellH: cellH,
+      strokeWeight: parseFloat(lStrokeEl.value), strokeOpacity: parseInt(lOpacityEl.value),
+      showBorder: lBorderEl.checked };
+  }
+
+  function updateLayoutLabels() {
+    document.getElementById('lColsVal').textContent = lColsEl.value;
+    document.getElementById('lRowsVal').textContent = lRowsEl.value;
+    document.getElementById('lGutterVal').textContent = lGutterEl.value + 'px';
+    document.getElementById('lMarginVal').textContent = lMarginEl.value + 'px';
+    document.getElementById('lStrokeVal').textContent = lStrokeEl.value;
+    document.getElementById('lOpacityVal').textContent = lOpacityEl.value + '%';
+  }
+
+  function drawLayoutPreview() {
+    var p = getLayoutParams(), cw = canvasL.width, ch = canvasL.height;
+    ctxL.clearRect(0, 0, cw, ch);
+    var pad = 20, scale = Math.min((cw-pad*2)/p.frameWidth, (ch-pad*2)/p.frameHeight);
+    var fox = (cw - p.frameWidth*scale)/2, foy = (ch - p.frameHeight*scale)/2;
+    var fw = p.frameWidth*scale, fh = p.frameHeight*scale;
+    // Frame boundary
+    ctxL.strokeStyle = 'rgba(255,255,255,0.15)'; ctxL.lineWidth = 1;
+    ctxL.strokeRect(fox, foy, fw, fh);
+    var alpha = p.strokeOpacity / 100;
+    ctxL.strokeStyle = 'rgba(255,255,255,' + (alpha*0.45) + ')'; ctxL.lineWidth = 1;
+    var m = p.margin * scale, g = p.gutter * scale;
+    var cW = p.cellW * scale, cH = p.cellH * scale;
+    // Vertical lines — full height of frame
+    for (var c = 0; c <= p.cols; c++) {
+      var x = fox + m + c * (cW + g);
+      ctxL.beginPath(); ctxL.moveTo(x, foy); ctxL.lineTo(x, foy + fh); ctxL.stroke();
+      if (c < p.cols && g > 0) {
+        var x2 = x + cW;
+        ctxL.beginPath(); ctxL.moveTo(x2, foy); ctxL.lineTo(x2, foy + fh); ctxL.stroke();
+      }
+    }
+    // Horizontal lines — full width of frame
+    for (var r = 0; r <= p.rows; r++) {
+      var y = foy + m + r * (cH + g);
+      ctxL.beginPath(); ctxL.moveTo(fox, y); ctxL.lineTo(fox + fw, y); ctxL.stroke();
+      if (r < p.rows && g > 0) {
+        var y2 = y + cH;
+        ctxL.beginPath(); ctxL.moveTo(fox, y2); ctxL.lineTo(fox + fw, y2); ctxL.stroke();
+      }
+    }
+    if (p.showBorder) {
+      ctxL.strokeStyle = 'rgba(255,255,255,' + (alpha*0.7) + ')'; ctxL.lineWidth = 2;
+      ctxL.strokeRect(fox, foy, fw, fh);
+    }
+  }
+
+  setupMathInput(lWidthEl, function() { drawLayoutPreview(); });
+  setupMathInput(lHeightEl, function() { drawLayoutPreview(); });
+  layoutSliders.forEach(function(el) {
+    el.addEventListener('input', function() { updateLayoutLabels(); updateSliderFill(el); drawLayoutPreview(); });
+  });
+
+  document.getElementById('createLayoutBtn').addEventListener('click', function() {
+    var p = getLayoutParams();
+    parent.postMessage({ pluginMessage: { type: 'create-layout-grid', cols: p.cols, rows: p.rows, frameWidth: p.frameWidth, frameHeight: p.frameHeight, gutter: p.gutter, margin: p.margin, cellW: p.cellW, cellH: p.cellH, strokeWeight: p.strokeWeight, strokeOpacity: p.strokeOpacity, showBorder: p.showBorder } }, '*');
+  });
+
+  // ==========================
+  // INIT
+  // ==========================
+  function initAllSliders() {
+    floorInputs.forEach(function(el) { updateSliderFill(el); });
+    flatSliders.forEach(function(el) { updateSliderFill(el); });
+    dotSliders.forEach(function(el) { updateSliderFill(el); });
+    layoutSliders.forEach(function(el) { updateSliderFill(el); });
+  }
+
+  updateFloorLabels(); updateFlatLabels(); updateDotLabels(); updateLayoutLabels();
+  renderCellOptions('f');
+  initAllSliders(); drawFloorPreview();
+</script>
+</body>
+</html>
