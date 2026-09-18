@@ -1,6 +1,6 @@
 # Grid Master by Rikki Janae
 
-A lightweight grid generator for Figma with four modes: floor grids with one-point perspective, flat grids with auto-calculated square cells, dot grids with adjustable spacing, and layout grids with gutters and margins.
+A lightweight grid generator for Figma with five modes: floor grids with one-point perspective, flat grids with auto-calculated square cells, dot grids with adjustable spacing, layout grids with gutters and margins, and diagonal grids of evenly spaced parallel lines.
 
 All modes support math in dimension inputs, live preview, and output as fully editable Figma vectors. Built for designers who want precise grids without the hassle.
 
@@ -69,6 +69,21 @@ Generates overlapping column and row lines with adjustable gutters and margins. 
 - **Stroke** adjusts line thickness
 - **Opacity** controls line transparency
 - **Show Border** toggles the outer frame border
+
+
+### Diagonal Grid
+
+Generates evenly spaced parallel lines at an angle, cut cleanly to the frame edges. Great for hatching, shading, striped backgrounds and pattern fills.
+
+**Controls:**
+
+- **Width / Height** set the output frame dimensions in pixels (math supported)
+- **Spacing** (8-200px) sets the distance between lines, measured square to the lines
+- **Angle** (5-85 degrees) sets how steep the lines are
+- **Direction** switches between rising (╱) and falling (╲) lines
+- **Stroke** adjusts line thickness
+- **Opacity** controls line transparency
+- **Show Border** toggles the frame border
 
 ## Math in Dimension Inputs
 

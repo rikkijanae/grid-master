@@ -182,6 +182,7 @@
   <div class="tab" id="tabFlat" onclick="switchTab('flat')">flat</div>
   <div class="tab" id="tabDot" onclick="switchTab('dot')">dot</div>
   <div class="tab" id="tabLayout" onclick="switchTab('layout')">layout</div>
+  <div class="tab" id="tabDiagonal" onclick="switchTab('diagonal')">diagonal</div>
 </div>
 
 <!-- ======================== -->
@@ -331,6 +332,41 @@
   <button class="btn-create" id="createLayoutBtn">create grid</button>
 </div>
 
+<!-- ======================== -->
+<!-- DIAGONAL LINES          -->
+<!-- ======================== -->
+<div class="tab-panel" id="panelDiagonal">
+  <div class="preview-wrap"><canvas id="previewDiagonal" width="780" height="500"></canvas></div>
+
+  <div class="section">
+    <div class="section-label">dimensions</div>
+    <div class="dim-row">
+      <div class="dim-input"><input type="text" id="gWidth" value="1920" class="math-input" /><label>Width</label></div>
+      <div class="dim-input"><input type="text" id="gHeight" value="1080" class="math-input" /><label>Height</label></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">grid structure</div>
+    <div class="row"><label>Spacing</label><input type="range" id="gSpacing" min="8" max="200" value="40" /><span class="val" id="gSpacingVal">40px</span></div>
+    <div class="row"><label>Angle</label><input type="range" id="gAngle" min="5" max="85" value="45" /><span class="val" id="gAngleVal">45&deg;</span></div>
+    <div class="row"><label>Direction</label><div class="cell-options" id="gDir"><button type="button" class="cell-pill active" data-dir="1">&#9585; rising</button><button type="button" class="cell-pill" data-dir="-1">&#9586; falling</button></div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">style</div>
+    <div class="row"><label>Stroke</label><input type="range" id="gStroke" min="0.5" max="5" step="0.25" value="1" /><span class="val" id="gStrokeVal">1</span></div>
+    <div class="row"><label>Opacity</label><input type="range" id="gOpacity" min="5" max="100" value="100" /><span class="val" id="gOpacityVal">100%</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">options</div>
+    <div class="check-row"><input type="checkbox" id="gBorder" /><label for="gBorder">Show Border</label></div>
+  </div>
+
+  <button class="btn-create" id="createDiagonalBtn">create grid</button>
+</div>
+
 <!-- FOOTER -->
 <div class="footer">
   <div class="footer-line">
@@ -345,7 +381,7 @@
   var currentTab = 'floor';
   function switchTab(tab) {
     currentTab = tab;
-    ['Floor','Flat','Dot','Layout'].forEach(function(t) {
+    ['Floor','Flat','Dot','Layout','Diagonal'].forEach(function(t) {
       var key = t.toLowerCase();
       document.getElementById('tab' + t).className = tab === key ? 'tab active' : 'tab';
       document.getElementById('panel' + t).className = tab === key ? 'tab-panel active' : 'tab-panel';
@@ -354,6 +390,7 @@
     if (tab === 'flat') { renderCellOptions('f'); drawFlatPreview(); }
     if (tab === 'dot') drawDotPreview();
     if (tab === 'layout') drawLayoutPreview();
+    if (tab === 'diagonal') drawDiagonalPreview();
   }
 
   // ==========================
@@ -734,6 +771,86 @@
   });
 
   // ==========================
+  // DIAGONAL LINES
+  // ==========================
+  var canvasG = document.getElementById('previewDiagonal'), ctxG = canvasG.getContext('2d');
+  var gWidthEl = document.getElementById('gWidth'), gHeightEl = document.getElementById('gHeight');
+  var gSpacingEl = document.getElementById('gSpacing'), gAngleEl = document.getElementById('gAngle');
+  var gStrokeEl = document.getElementById('gStroke'), gOpacityEl = document.getElementById('gOpacity');
+  var gBorderEl = document.getElementById('gBorder');
+  var diagonalSliders = [gSpacingEl, gAngleEl, gStrokeEl, gOpacityEl, gBorderEl];
+  var gDirection = 1; // 1 = rising ╱, -1 = falling ╲
+  [].slice.call(document.querySelectorAll('#gDir .cell-pill')).forEach(function(b) {
+    b.addEventListener('click', function() {
+      gDirection = parseInt(b.getAttribute('data-dir'));
+      [].slice.call(document.querySelectorAll('#gDir .cell-pill')).forEach(function(o) { o.className = o === b ? 'cell-pill active' : 'cell-pill'; });
+      drawDiagonalPreview();
+    });
+  });
+
+  // Parallel lines at `angle` degrees, rising (dir 1) or falling (dir -1), `spacing` px apart (square to the lines),
+  // each cut to the frame. Same maths as code.js, so the preview matches what gets created.
+  function diagonalSegments(w, h, spacing, angle, dir) {
+    var a = angle * Math.PI / 180, dx = Math.cos(a), dy = -(dir === -1 ? -1 : 1) * Math.sin(a), nx = -dy, ny = dx;
+    var proj = [0, w * nx, h * ny, w * nx + h * ny];
+    var lo = Math.min.apply(null, proj), hi = Math.max.apply(null, proj), segs = [];
+    for (var k = Math.ceil(lo / spacing); k * spacing <= hi; k++) {
+      var ox = k * spacing * nx, oy = k * spacing * ny, t0 = -Infinity, t1 = Infinity;
+      [[dx, ox, w], [dy, oy, h]].forEach(function(ax) {
+        var d = ax[0], o = ax[1], max = ax[2];
+        if (Math.abs(d) < 1e-9) { if (o < 0 || o > max) t0 = Infinity; return; }
+        var ta = (0 - o) / d, tb = (max - o) / d;
+        t0 = Math.max(t0, Math.min(ta, tb)); t1 = Math.min(t1, Math.max(ta, tb));
+      });
+      if (t1 - t0 >= 0.5) segs.push([ox + t0 * dx, oy + t0 * dy, ox + t1 * dx, oy + t1 * dy]);
+    }
+    return segs;
+  }
+
+  function getDiagonalParams() {
+    return { frameWidth: getMathValue(gWidthEl) || 1920, frameHeight: getMathValue(gHeightEl) || 1080,
+      spacing: parseInt(gSpacingEl.value), angle: parseInt(gAngleEl.value), direction: gDirection,
+      strokeWeight: parseFloat(gStrokeEl.value), strokeOpacity: parseInt(gOpacityEl.value), showBorder: gBorderEl.checked };
+  }
+
+  function updateDiagonalLabels() {
+    document.getElementById('gSpacingVal').textContent = gSpacingEl.value + 'px';
+    document.getElementById('gAngleVal').textContent = gAngleEl.value + '\u00b0';
+    document.getElementById('gStrokeVal').textContent = gStrokeEl.value;
+    document.getElementById('gOpacityVal').textContent = gOpacityEl.value + '%';
+  }
+
+  function drawDiagonalPreview() {
+    var p = getDiagonalParams(), cw = canvasG.width, ch = canvasG.height;
+    ctxG.clearRect(0, 0, cw, ch);
+    var pad = 20, scale = Math.min((cw-pad*2)/p.frameWidth, (ch-pad*2)/p.frameHeight);
+    var fox = (cw - p.frameWidth*scale)/2, foy = (ch - p.frameHeight*scale)/2;
+    var fw = p.frameWidth*scale, fh = p.frameHeight*scale;
+    ctxG.strokeStyle = 'rgba(255,255,255,0.15)'; ctxG.lineWidth = 1;
+    ctxG.strokeRect(fox, foy, fw, fh);
+    var alpha = p.strokeOpacity / 100;
+    ctxG.strokeStyle = 'rgba(255,255,255,' + (alpha*0.45) + ')'; ctxG.lineWidth = 1;
+    diagonalSegments(p.frameWidth, p.frameHeight, p.spacing, p.angle, p.direction).forEach(function(s) {
+      ctxG.beginPath(); ctxG.moveTo(fox + s[0]*scale, foy + s[1]*scale); ctxG.lineTo(fox + s[2]*scale, foy + s[3]*scale); ctxG.stroke();
+    });
+    if (p.showBorder) {
+      ctxG.strokeStyle = 'rgba(255,255,255,' + (alpha*0.7) + ')'; ctxG.lineWidth = 2;
+      ctxG.strokeRect(fox, foy, fw, fh);
+    }
+  }
+
+  setupMathInput(gWidthEl, function() { drawDiagonalPreview(); });
+  setupMathInput(gHeightEl, function() { drawDiagonalPreview(); });
+  diagonalSliders.forEach(function(el) {
+    el.addEventListener('input', function() { updateDiagonalLabels(); updateSliderFill(el); drawDiagonalPreview(); });
+  });
+
+  document.getElementById('createDiagonalBtn').addEventListener('click', function() {
+    var p = getDiagonalParams();
+    parent.postMessage({ pluginMessage: { type: 'create-diagonal-grid', frameWidth: p.frameWidth, frameHeight: p.frameHeight, spacing: p.spacing, angle: p.angle, direction: p.direction, strokeWeight: p.strokeWeight, strokeOpacity: p.strokeOpacity, showBorder: p.showBorder } }, '*');
+  });
+
+  // ==========================
   // INIT
   // ==========================
   function initAllSliders() {
@@ -741,9 +858,10 @@
     flatSliders.forEach(function(el) { updateSliderFill(el); });
     dotSliders.forEach(function(el) { updateSliderFill(el); });
     layoutSliders.forEach(function(el) { updateSliderFill(el); });
+    diagonalSliders.forEach(function(el) { updateSliderFill(el); });
   }
 
-  updateFloorLabels(); updateFlatLabels(); updateDotLabels(); updateLayoutLabels();
+  updateFloorLabels(); updateFlatLabels(); updateDotLabels(); updateLayoutLabels(); updateDiagonalLabels();
   renderCellOptions('f');
   initAllSliders(); drawFloorPreview();
 </script>

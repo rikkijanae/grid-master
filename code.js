@@ -268,6 +268,73 @@ figma.ui.onmessage = async (msg) => {
     figma.notify('Layout grid created!');
   }
 
+  // === DIAGONAL LINES ===
+  if (msg.type === 'create-diagonal-grid') {
+    const { frameWidth, frameHeight, spacing, angle, direction, strokeWeight, strokeOpacity, showBorder } = msg;
+
+    const frame = figma.createFrame();
+    frame.name = "Diagonal Grid";
+    frame.fills = [];
+    frame.clipsContent = true;
+    frame.resize(frameWidth, frameHeight);
+
+    const strokeColor = { r: 0.4, g: 0.4, b: 0.4 };
+    const opacity = strokeOpacity / 100;
+
+    // Parallel lines at `angle` degrees from horizontal, rising to the right (direction 1, ╱) or falling (-1, ╲),
+    // `spacing` px apart (measured square to the lines). Each line is cut to the frame, so every vector is one
+    // clean segment from edge to edge.
+    const a = angle * Math.PI / 180, dir = direction === -1 ? -1 : 1;
+    const dx = Math.cos(a), dy = -dir * Math.sin(a); // along a line
+    const nx = -dy, ny = dx;                   // square to the lines
+    const proj = [0, frameWidth * nx, frameHeight * ny, frameWidth * nx + frameHeight * ny];
+    const lo = Math.min(...proj), hi = Math.max(...proj);
+    let n = 0;
+
+    for (let k = Math.ceil(lo / spacing); k * spacing <= hi; k++) {
+      const ox = k * spacing * nx, oy = k * spacing * ny;
+      let t0 = -Infinity, t1 = Infinity;
+      for (const [d, o, max] of [[dx, ox, frameWidth], [dy, oy, frameHeight]]) {
+        if (Math.abs(d) < 1e-9) { if (o < 0 || o > max) t0 = Infinity; continue; }
+        const ta = (0 - o) / d, tb = (max - o) / d;
+        t0 = Math.max(t0, Math.min(ta, tb));
+        t1 = Math.min(t1, Math.max(ta, tb));
+      }
+      if (t1 - t0 < 0.5) continue; // misses the frame or only grazes a corner
+
+      const vec = figma.createVector();
+      vec.name = "Line " + (++n);
+      vec.vectorPaths = [{
+        windingRule: "NONE",
+        data: "M " + (ox + t0 * dx).toFixed(2) + " " + (oy + t0 * dy).toFixed(2) + " L " + (ox + t1 * dx).toFixed(2) + " " + (oy + t1 * dy).toFixed(2)
+      }];
+      vec.strokes = [{ type: 'SOLID', color: strokeColor, opacity: opacity }];
+      vec.strokeWeight = strokeWeight;
+      vec.strokeCap = "NONE";
+      frame.appendChild(vec);
+    }
+
+    if (showBorder) {
+      const border = figma.createRectangle();
+      border.name = "Border";
+      border.x = 0;
+      border.y = 0;
+      border.resize(frameWidth, frameHeight);
+      border.fills = [];
+      border.strokes = [{ type: 'SOLID', color: strokeColor, opacity: opacity }];
+      border.strokeWeight = strokeWeight * 1.5;
+      border.strokeAlign = "INSIDE";
+      frame.appendChild(border);
+    }
+
+    frame.x = Math.round(figma.viewport.center.x - frameWidth / 2);
+    frame.y = Math.round(figma.viewport.center.y - frameHeight / 2);
+    figma.currentPage.appendChild(frame);
+    figma.currentPage.selection = [frame];
+    figma.viewport.scrollAndZoomIntoView([frame]);
+    figma.notify('Diagonal grid created!');
+  }
+
   if (msg.type === 'cancel') {
     figma.closePlugin();
   }
